@@ -28,11 +28,17 @@ KERNEL_DIR="$REPO_ROOT/kernel/$CATEGORY"
 
 mkdir -p "$BUILD_DIR"
 
+EXTRA_LIBS=()
+if grep -q 'nvrtc_helper.h' "$SRC" 2>/dev/null; then
+  EXTRA_LIBS+=(-lnvrtc -lcuda)
+fi
+
 echo "Compiling $SRC -> $BUILD_DIR/$NAME"
 nvcc -std=c++17 -x cu -arch=native \
   -I"$UTILS_DIR" \
   -I"$KERNEL_DIR" \
   -o "$BUILD_DIR/$NAME" \
-  "$SRC"
+  "$SRC" \
+  "${EXTRA_LIBS[@]}"
 
 echo "Done: $BUILD_DIR/$NAME"

@@ -282,6 +282,8 @@ inline char *sdkFindFilePath(const char *filename,
   const char *searchPath[] = {
       "./",                                           // same dir
       "./data/",                                      // same dir
+      "../kernel/0_Introduction/",                    // CUDAProgrammingGym: from tests/
+      "../../kernel/0_Introduction/",                 // CUDAProgrammingGym: from tests/build/
 
       "../../../../cpp/<executable_name>/",       // up 4 in tree
       "../../../cpp/<executable_name>/",          // up 3 in tree
