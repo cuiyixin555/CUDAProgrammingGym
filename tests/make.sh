@@ -33,9 +33,22 @@ EXTRA_FLAGS=()
 if grep -q 'nvrtc_helper.h' "$SRC" 2>/dev/null; then
   EXTRA_LIBS+=(-lnvrtc -lcuda)
 fi
+if grep -q 'helper_cuda_drvapi.h' "$SRC" 2>/dev/null; then
+  EXTRA_LIBS+=(-lcuda)
+fi
 if grep -q '#include <omp.h>' "$SRC" 2>/dev/null || \
    grep -q '#include <omp.h>' "$KERNEL_DIR"/*.h 2>/dev/null; then
   EXTRA_FLAGS+=(-Xcompiler -fopenmp)
+fi
+
+# Driver API sample: compile kernel .cu to fatbin at build time
+FATBIN_FILE=""
+if [[ "$NAME" == "matrixMulDrv" && -f "$KERNEL_DIR/matrixMulDrv_kernel.cu" ]]; then
+  FATBIN_FILE="$BUILD_DIR/matrixMul_kernel64.fatbin"
+  echo "Compiling $KERNEL_DIR/matrixMulDrv_kernel.cu -> $FATBIN_FILE"
+  nvcc -std=c++17 -arch=native -fatbin \
+    -o "$FATBIN_FILE" \
+    "$KERNEL_DIR/matrixMulDrv_kernel.cu"
 fi
 
 echo "Compiling $SRC -> $BUILD_DIR/$NAME"
