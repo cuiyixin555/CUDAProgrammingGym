@@ -1,5 +1,3 @@
-// MIT License
-
 // Copyright (c) 2026 CUI Xin (崔 欣)
 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -20,30 +18,56 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#ifndef ASYNC_API_KERNEL_H
-#define ASYNC_API_KERNEL_H
-
-// includes CUDA Runtime
-#include <cuda_profiler_api.h>
+// CUDA runtime
 #include <cuda_runtime.h>
 
-// includes, project
+// helper functions and utilities to work with CUDA
 #include <helper_cuda.h>
-#include <helper_functions.h> // helper utility functions
+#include <helper_functions.h>
 
-__global__ void increment_kernel(int *g_data, int inc_value) {
-  int idx = blockIdx.x * blockDim.x + threadIdx.x;
-  g_data[idx] = g_data[idx] + inc_value;
-}
+#ifndef CLOCK_KERNEL_H
+#define CLOCK_KERNEL_H
 
-bool correct_output(int *data, const int n, const int x) {
-  for (int i = 0; i < n; i++)
-    if (data[i] != x) {
-      printf("Error! data[%d] = %d, ref = %d\n", i, data[i], x);
-      return false;
+// This kernel computes a standard parallel reduction and evaluates the
+// time it takes to do that for each block. The timing results are stored
+// in device memory.
+__global__ static void timedReduction(const float *input, float *output,
+                                      clock_t *timer) {
+  // __shared__ float shared[2 * blockDim.x];
+  extern __shared__ float shared[];
+
+  const int tid = threadIdx.x;
+  const int bid = blockIdx.x;
+
+  if (tid == 0)
+    timer[bid] = clock();
+
+  // Copy input.
+  shared[tid] = input[tid];
+  shared[tid + blockDim.x] = input[tid + blockDim.x];
+
+  // Perform reduction to find minimum.
+  for (int d = blockDim.x; d > 0; d /= 2) {
+    __syncthreads();
+
+    if (tid < d) {
+      float f0 = shared[tid];
+      float f1 = shared[tid + d];
+
+      if (f1 < f0) {
+        shared[tid] = f1;
+      }
     }
+  }
 
-  return true;
+  // Write result.
+  if (tid == 0)
+    output[bid] = shared[0];
+
+  __syncthreads();
+
+  if (tid == 0)
+    timer[bid + gridDim.x] = clock();
 }
 
-#endif // ASYNC_API_KERNEL_H
+#endif // CLOCK_KERNEL_H
